@@ -8,11 +8,13 @@ def get_stream_url(video_url):
     try:
         # Professional options for yt-dlp
         ydl_opts = {
-            'format': 'best[ext=mp4]/best', 
+            'cookiefile': 'cookies.txt',  # Ye line add karni hai
+            'format': 'best',
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'quiet': True,
             'no_warnings': True,
             'noplaylist': True,
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
