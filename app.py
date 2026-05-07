@@ -6,40 +6,34 @@ app = Flask(__name__)
 
 def get_stream_url(video_url):
     try:
-        # Professional options for cloud hosting (Render/Heroku)
-       ydl_opts = {
-      'cookiefile': 'cookies.txt',
-      'format': 'best',
-      'nocheckcertificate': True,
-      'http_headers': {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-        'Accept': '*/*',
-        'Connection': 'keep-alive',
-        },
-         'params': {
-        'extract_flat': True,
-        'force_generic_extractor': False,
+        # Professional options for cloud hosting
+        ydl_opts = {
+            'cookiefile': 'cookies.txt',
+            'format': 'best',
+            'nocheckcertificate': True,
+            'quiet': True,
+            'no_warnings': True,
+            # 'youtube_include_dash_manifest': False, # Kabhi kabhi manifest block hota hai
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                'Accept': '*/*',
+                'Connection': 'keep-alive',
+            },
         }
-      }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # extract_info calls YouTube
             info = ydl.extract_info(video_url, download=False)
             
-            # 1. Sabse pehle seedha URL check karein
             stream_url = info.get('url')
             
-            # 2. Agar seedha nahi mila, toh formats list mein dhoondein
             if not stream_url:
                 formats = info.get('formats', [])
-                # Reverse loop taaki best quality pehle mile
                 for f in reversed(formats):
-                    # Humein wo link chahiye jisme video aur audio dono ho (acodec aur vcodec != none)
                     if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url'):
                         stream_url = f.get('url')
                         break
             
-            # 3. Agar ab bhi nahi mila, toh koi bhi valid URL le lo
             if not stream_url and formats:
                 stream_url = formats[0].get('url')
                 
@@ -56,7 +50,7 @@ def get_video():
     if not video_url:
         return jsonify({
             "status": "error",
-            "message": "Missing 'url' parameter. Usage: /get-video?url=YOUR_LINK"
+            "message": "Missing 'url' parameter."
         }), 400
 
     stream_url = get_stream_url(video_url)
@@ -67,12 +61,12 @@ def get_video():
             "stream_url": stream_url
         })
     else:
+        # Yahan hum detailed error bhej sakte hain logs dekhne ke liye
         return jsonify({
             "status": "error",
-            "message": "Failed to fetch stream URL. Check logs for details."
+            "message": "Failed to fetch stream URL. YouTube might be blocking Render's IP."
         }), 500
 
 if __name__ == '__main__':
-    # Render automatically sets PORT environment variable
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
