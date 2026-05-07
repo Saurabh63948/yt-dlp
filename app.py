@@ -6,25 +6,27 @@ app = Flask(__name__)
 
 def get_stream_url(video_url):
     try:
-        # Professional options for cloud hosting
+        # OAuth2 logic for yt-dlp
         ydl_opts = {
-            'cookiefile': 'cookies.txt',
+            # Ye line OAuth2 activate karegi
+            'username': 'oauth2',
+            'password': '', 
+            
             'format': 'best',
             'nocheckcertificate': True,
-            'quiet': True,
-            'no_warnings': True,
-            # 'youtube_include_dash_manifest': False, # Kabhi kabhi manifest block hota hai
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Accept': '*/*',
-                'Connection': 'keep-alive',
+            'quiet': False,  # Isse logs mein login code dikhega
+            'no_warnings': False,
+            
+            # Kuch extra headers taaki verification smooth ho
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
+                }
             },
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            # extract_info calls YouTube
             info = ydl.extract_info(video_url, download=False)
-            
             stream_url = info.get('url')
             
             if not stream_url:
@@ -34,37 +36,29 @@ def get_stream_url(video_url):
                         stream_url = f.get('url')
                         break
             
-            if not stream_url and formats:
-                stream_url = formats[0].get('url')
-                
             return stream_url
 
     except Exception as e:
-        print(f"Error details: {str(e)}")
-        return None
+        # Error ko console pe print karein taaki code dikhe
+        print(f"CRITICAL ERROR: {str(e)}")
+        return str(e)
 
 @app.route('/get-video', methods=['GET'])
 def get_video():
     video_url = request.args.get('url')
-
     if not video_url:
-        return jsonify({
-            "status": "error",
-            "message": "Missing 'url' parameter."
-        }), 400
+        return jsonify({"error": "URL parameter missing"}), 400
 
-    stream_url = get_stream_url(video_url)
+    result = get_stream_url(video_url)
 
-    if stream_url:
-        return jsonify({
-            "status": "success",
-            "stream_url": stream_url
-        })
+    # Agar result mein 'Sign in' ya code ki baat hai toh wo return karein
+    if result and "https" in result:
+        return jsonify({"status": "success", "stream_url": result})
     else:
-        # Yahan hum detailed error bhej sakte hain logs dekhne ke liye
         return jsonify({
-            "status": "error",
-            "message": "Failed to fetch stream URL. YouTube might be blocking Render's IP."
+            "status": "action_required",
+            "message": "Check Render Logs to authorize OAuth2",
+            "details": result
         }), 500
 
 if __name__ == '__main__':
