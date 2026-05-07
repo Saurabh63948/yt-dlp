@@ -7,21 +7,20 @@ app = Flask(__name__)
 def get_stream_url(video_url):
     try:
         # Professional options for cloud hosting (Render/Heroku)
-        ydl_opts = {
-            'cookiefile': 'cookies.txt',  # Ensure this file exists in your root folder
-            'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best', 
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'quiet': True,
-            'no_warnings': True,
-            'noplaylist': True,
-            'nocheckcertificate': True,  # Cloud servers ke SSL issues fix karne ke liye
-            'extract_flat': False,
-            'http_headers': {
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Accept-Language': 'en-us,en;q=0.5',
-                'Sec-Fetch-Mode': 'navigate',
-            }
+       ydl_opts = {
+      'cookiefile': 'cookies.txt',
+      'format': 'best',
+      'nocheckcertificate': True,
+      'http_headers': {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+        'Connection': 'keep-alive',
+        },
+         'params': {
+        'extract_flat': True,
+        'force_generic_extractor': False,
         }
+      }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             # extract_info calls YouTube
