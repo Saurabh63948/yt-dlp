@@ -25,8 +25,9 @@ def get_cookies_file():
 
 def get_stream_url(video_url):
     cookies_file, is_temp = get_cookies_file()
+    proxy = os.environ.get("PROXY_URL")
+
     try:
-        # Attempt 1: Cookies ke saath web clients
         ydl_opts = {
             'format': 'best/bestvideo+bestaudio',
             'nocheckcertificate': True,
@@ -40,7 +41,11 @@ def get_stream_url(video_url):
 
         if cookies_file:
             ydl_opts['cookiefile'] = cookies_file
-            print(f"DEBUG: cookiefile set to {cookies_file}")
+            print(f"DEBUG: cookiefile set")
+
+        if proxy:
+            ydl_opts['proxy'] = proxy
+            print(f"DEBUG: proxy set")
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
@@ -56,8 +61,8 @@ def get_stream_url(video_url):
             return stream_url
 
     except Exception as e:
-        # Attempt 2: Cookies ke bina android_vr
-        print(f"Attempt 1 failed: {str(e)}, trying android_vr without cookies...")
+        # Fallback: android_vr without cookies, with proxy
+        print(f"Attempt 1 failed: {str(e)}, trying android_vr...")
         try:
             ydl_opts2 = {
                 'format': 'best/bestvideo+bestaudio',
@@ -69,6 +74,8 @@ def get_stream_url(video_url):
                     }
                 },
             }
+            if proxy:
+                ydl_opts2['proxy'] = proxy
 
             with yt_dlp.YoutubeDL(ydl_opts2) as ydl:
                 info = ydl.extract_info(video_url, download=False)
@@ -107,46 +114,6 @@ def get_video():
             "message": "Failed to extract stream URL",
             "details": result
         }), 500
-
-# ========== DEBUG ENDPOINT ==========
-@app.route('/list-formats', methods=['GET'])
-def list_formats():
-    video_url = request.args.get('url')
-    if not video_url:
-        return jsonify({"error": "URL parameter missing"}), 400
-
-    cookies_file, is_temp = get_cookies_file()
-    try:
-        ydl_opts = {
-            'nocheckcertificate': True,
-            'quiet': True,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android_vr'],
-                }
-            },
-        }
-        if cookies_file:
-            ydl_opts['cookiefile'] = cookies_file
-
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(video_url, download=False)
-            formats = []
-            for f in info.get('formats', []):
-                formats.append({
-                    'format_id': f.get('format_id'),
-                    'ext': f.get('ext'),
-                    'vcodec': f.get('vcodec'),
-                    'acodec': f.get('acodec'),
-                    'url_exists': bool(f.get('url')),
-                })
-            return jsonify({"formats": formats})
-    except Exception as e:
-        return jsonify({"error": str(e)})
-    finally:
-        if cookies_file and is_temp and os.path.exists(cookies_file):
-            os.unlink(cookies_file)
-# ========== DEBUG ENDPOINT END ==========
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
