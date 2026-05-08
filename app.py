@@ -6,62 +6,62 @@ app = Flask(__name__)
 
 def get_stream_url(video_url):
     try:
-        # Professional options for yt-dlp
+        # OAuth2 logic for yt-dlp
         ydl_opts = {
-               'format': 'best[ext=mp4]/best',
-               'nocheckcertificate': True,
-               'quiet': True,
-               'extractor_args': {
-               'youtube': {
-               'player_client': ['android_vr'],
+            # Ye line OAuth2 activate karegi
+            'username': 'oauth2',
+            'password': '', 
+            
+            'format': 'best',
+            'nocheckcertificate': True,
+            'quiet': False,  # Isse logs mein login code dikhega
+            'no_warnings': False,
+            
+            # Kuch extra headers taaki verification smooth ho
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'web'],
                 }
-               },
+            },
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(video_url, download=False)
-            
-            # Direct URL dhoondne ka logic
             stream_url = info.get('url')
             
-            # Agar direct URL nahi mila toh formats check karega
             if not stream_url:
                 formats = info.get('formats', [])
-                for f in formats:
-                    if f.get('ext') == 'mp4' and f.get('url'):
-                        stream_url = f['url']
+                for f in reversed(formats):
+                    if f.get('vcodec') != 'none' and f.get('acodec') != 'none' and f.get('url'):
+                        stream_url = f.get('url')
                         break
             
             return stream_url
 
     except Exception as e:
-        print(f"Error: {str(e)}")
-        return None
+        # Error ko console pe print karein taaki code dikhe
+        print(f"CRITICAL ERROR: {str(e)}")
+        return str(e)
 
 @app.route('/get_video', methods=['GET'])
 def get_video():
     # URL parameter browser se lega
     video_url = request.args.get('url')
-
     if not video_url:
-        return jsonify({
-            "status": "error",
-            "message": "Missing 'url' parameter. Usage: /get-video?url=YOUR_LINK"
-        }), 400
+        return jsonify({"error": "URL parameter missing"}), 400
 
-    stream_url = get_stream_url(video_url)
+    result = get_stream_url(video_url)
 
-    if stream_url:
-        return jsonify({
-            "status": "success",
-            "video_title": "Fetched", 
-            "stream_url": stream_url
-        })
+    # Agar result mein 'Sign in' ya code ki baat hai toh wo return karein
+    if result and "https" in result:
+        return jsonify({"status": "success", "stream_url": result})
     else:
         return jsonify({
-            "status": "error",
-            "message": "Failed to fetch stream URL. The video might be restricted."
+            "status": "action_required",
+            "message": "Check Render Logs to authorize OAuth2",
+            "details": result
         }), 500
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
